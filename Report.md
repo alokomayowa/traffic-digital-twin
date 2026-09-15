@@ -1,64 +1,99 @@
+# Toronto Traffic Digital Twin: Results Report
 
----
+This report documents the calibration and validation results for the Toronto SUMO digital twin described in the [README](README.md). The detailed setup history and external references are available in the [build guide](sumo-digital-twin-build-guide.md).
 
-## 2. Results + Validation + Limitations (for your report / paper)
+![Map of the study area intersections](intersection-map.png)
 
-```markdown
-## 5. Results
+## 1. Study and Evaluation Design
 
-### 5.1 Calibration Performance
+The model represents a downtown Toronto study area using an OpenStreetMap-derived SUMO network and City of Toronto Turning Movement Count (TMC) data.
 
-The model was calibrated against Turning Movement Counts collected on 16 January 2020.  
-After demand adjustments, performance on the internal (well-connected) approaches was:
+| Item | Value |
+| --- | --- |
+| Calibration day | 16 January 2020 |
+| Validation day | 25 January 2020 |
+| Observation interval | 15 minutes |
+| Main metric | GEH statistic |
+| Primary evaluation set | Internal, well-connected approaches |
 
-| Metric                        | Value   |
-|-------------------------------|---------|
-| Average GEH                   | 2.87    |
-| Percentage of intervals GEH < 5 | 70.8% |
-| Percentage of intervals GEH < 10| 99.0% |
+The GEH statistic is calculated as:
 
-Approach-level results (internal network only):
+```text
+GEH = sqrt(2 * (M - C)^2 / (M + C))
+```
 
-| Approach              | Average GEH | Interpretation      |
-|-----------------------|-------------|---------------------|
-| 13467425 North        | 1.19        | Excellent           |
-| 13467425 South        | 1.36        | Excellent           |
-| 13467425 East         | 6.08        | Acceptable          |
+where `M` is the simulated count and `C` is the observed count. A GEH value below 5 is treated as a good match for an individual interval.
 
-These values indicate that the core of the digital twin reproduces observed traffic volumes with good accuracy.
+## 2. Reproducibility Links
 
-### 5.2 Validation Performance
+- Configuration files: [calibration](toronto/toronto_cal.sumocfg) and [validation](toronto/toronto_val.sumocfg).
+- Calibration data: [TMC CSV](toronto/demand/tmc_cal_2020-01-16.csv).
+- Validation data: [TMC CSV](toronto/demand/tmc_val_2020-01-25.csv).
+- Detector definitions: [detectors.add.xml](toronto/detectors/detectors.add.xml).
+- Calibration script: [calibrate_demand.py](toronto/calibrate_demand.py).
+- Internal GEH analysis: [diagnose_internal.py](toronto/diagnose_internal.py).
+- Result files: [calibration demand](toronto/results/calibration_demand.csv), [internal GEH summary](toronto/results/internal_geh_summary.csv), and [worst detectors](toronto/results/worst_detectors.csv).
 
-The calibrated model was applied without further parameter changes to an independent day (25 January 2020).  
-Results on the same internal approaches:
+Run instructions are maintained in the [README](README.md). Commands must be run from `toronto/` because the configuration files use relative paths.
 
-| Metric                        | Calibration | Validation |
-|-------------------------------|-------------|------------|
-| Average GEH                   | 2.87        | 8.69       |
-| % intervals GEH < 5           | 70.8%       | 56.2%      |
-| % intervals GEH < 10          | 99.0%       | 65.6%      |
+## 3. Calibration Performance
 
-| Approach              | Cal GEH | Val GEH | Observation                  |
-|-----------------------|---------|---------|------------------------------|
-| 13467425 North        | 1.19    | 3.54    | Remains acceptable           |
-| 13467425 East         | 6.08    | 2.76    | Improved                     |
-| 13467425 South        | 1.36    | 19.76   | Large degradation            |
+The model was calibrated against TMC observations from 16 January 2020. After demand adjustments, performance on the internal approaches was:
 
-The model generalises moderately well, but the South approach shows a substantial drop in performance on the validation day. This is attributed to day-specific demand patterns and residual limitations in route choice / turning ratios derived from a single calibration day.
+| Metric | Value |
+| --- | ---: |
+| Average GEH | **2.87** |
+| Intervals with GEH < 5 | **70.8%** |
+| Intervals with GEH < 10 | **99.0%** |
 
-### 5.3 Boundary Approaches and Network Limitations
+### Internal approach results
 
-Four approaches located on the periphery of the study area (centreline IDs 13467037 East, 13467080 East, 13467239 West and 14254942 North) consistently produced high GEH values (typically > 12).  
+| Approach | Average GEH | Interpretation |
+| --- | ---: | --- |
+| 13467425 North | 1.19 | Excellent |
+| 13467425 South | 1.36 | Excellent |
+| 13467425 East | 6.08 | Acceptable |
 
-Network inspection revealed that the upstream junctions feeding these approaches were not included in the OpenStreetMap extract generated by the OSM Web Wizard. As a result, vehicles could not enter the network realistically from those directions. Artificially inserted flows on the boundary edges failed to generate detector counts that matched field observations.
+These results indicate that the core of the digital twin reproduces observed traffic volumes with good accuracy.
 
-When these four boundary approaches are excluded, average GEH on the remaining internal approaches falls to 2.87 (calibration) with 70.8% of 15-minute intervals achieving GEH < 5. This demonstrates that the core of the digital twin is well calibrated; the residual error is primarily attributable to the limited spatial extent of the extracted network rather than to deficiencies in the demand-generation or calibration methodology.
+## 4. Validation Performance
 
-### 5.4 Summary of Achievements
+The calibrated model was applied without further parameter changes to the independent day of 25 January 2020.
 
-- Successfully constructed a microscopic digital twin of a real Toronto neighbourhood from open data.
-- Achieved strong calibration performance (GEH 2.87) on the internal network.
-- Identified and transparently documented the main source of remaining error (network boundary effects).
-- Performed an independent validation, revealing both the strengths and the transferability limits of the current demand model.
+| Metric | Calibration | Validation |
+| --- | ---: | ---: |
+| Average GEH | 2.87 | 8.69 |
+| Intervals with GEH < 5 | 70.8% | 56.2% |
+| Intervals with GEH < 10 | 99.0% | 65.6% |
 
-The project therefore provides a complete, reproducible pipeline from raw municipal counts to a calibrated and partially validated SUMO digital twin, together with a clear account of its current limitations and the most promising directions for future improvement.
+| Approach | Calibration GEH | Validation GEH | Observation |
+| --- | ---: | ---: | --- |
+| 13467425 North | 1.19 | 3.54 | Remains acceptable |
+| 13467425 East | 6.08 | 2.76 | Improved |
+| 13467425 South | 1.36 | 19.76 | Large degradation |
+
+The model generalizes moderately well. The south approach shows a substantial validation degradation, which is consistent with day-specific demand patterns and limitations in route choice and turning ratios derived from a single calibration day.
+
+## 5. Boundary Approaches and Network Limitations
+
+Four peripheral approaches produced consistently high GEH values:
+
+- 13467037 East
+- 13467080 East
+- 13467239 West
+- 14254942 North
+
+Network inspection showed that the upstream junctions feeding these approaches were outside the OpenStreetMap extract generated for the study area. Vehicles therefore could not enter the network realistically from those directions. Artificially inserted boundary flows did not produce detector counts that matched field observations.
+
+These four approaches are excluded from the primary evaluation. With them excluded, the internal network achieves an average GEH of 2.87 during calibration, with 70.8% of 15-minute intervals below GEH 5. The remaining error is therefore primarily associated with the limited network extent rather than the demand-generation and calibration workflow itself.
+
+## 6. Conclusions and Next Steps
+
+The project delivers a reproducible pipeline from municipal turning counts to a calibrated and partially validated SUMO digital twin. It achieves strong calibration performance on the well-connected core and makes the network-boundary limitation explicit rather than hiding it in aggregate metrics.
+
+Recommended next steps are:
+
+1. Expand the OpenStreetMap bounding box to include upstream junctions for the four boundary approaches.
+2. Introduce time-varying turning ratios or an origin-destination demand model.
+3. Calibrate driver behavior parameters such as `tau` and `sigma` after demand is stable.
+4. Add multi-day validation and confidence intervals for GEH.

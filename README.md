@@ -1,96 +1,129 @@
-# Toronto Traffic Digital Twin (SUMO)
+# Toronto Traffic Digital Twin
 
-A calibrated microscopic traffic digital twin of a downtown Toronto study area, built with SUMO and real Turning Movement Count (TMC) data.
+A calibrated microscopic traffic digital twin of a downtown Toronto study area, built with Eclipse SUMO and real Turning Movement Count (TMC) data from the City of Toronto.
 
-The project demonstrates a complete workflow from OpenStreetMap network extraction through demand generation, detector placement, calibration, and validation against municipal open data.
+![Map of the study area intersections](intersection-map.png)
+
+## Documentation
+
+- [Build guide](sumo-digital-twin-build-guide.md) - background, setup notes, and the original InTAS-to-Toronto workflow.
+- [Results report](Report.md) - calibration results, validation results, limitations, and interpretation.
 
 ## Project Overview
 
-| Item                    | Value                                      |
-|-------------------------|--------------------------------------------|
-| Study area              | Downtown Toronto (Financial District / St. Lawrence) |
-| Simulation tool         | Eclipse SUMO 1.27                          |
-| Real data               | City of Toronto TMC counts (2020)          |
-| Calibration day         | 2020-01-16                                 |
-| Validation day          | 2020-01-25                                 |
-| Main metric             | GEH statistic                              |
+| Item | Value |
+| --- | --- |
+| Study area | Downtown Toronto: Financial District / St. Lawrence |
+| Simulation tool | Eclipse SUMO 1.27 |
+| Real data | City of Toronto TMC counts from 2020 |
+| Calibration day | 2020-01-16 |
+| Validation day | 2020-01-25 |
+| Primary metric | GEH statistic |
 
 ## Key Results
 
-### Internal Approaches (well-connected network)
+The primary evaluation uses internal, well-connected approaches. Boundary approaches are reported separately because the upstream junctions fall outside the extracted network.
 
-| Metric                        | Calibration (16 Jan) | Validation (25 Jan) |
-|-------------------------------|----------------------|---------------------|
-| Average GEH                   | **2.87**             | **8.69**            |
-| % intervals with GEH < 5      | **70.8%**            | **56.2%**           |
-| % intervals with GEH < 10     | 99.0%                | 65.6%               |
+| Metric | Calibration | Validation |
+| --- | ---: | ---: |
+| Average GEH | **2.87** | **8.69** |
+| Intervals with GEH < 5 | **70.8%** | **56.2%** |
+| Intervals with GEH < 10 | 99.0% | 65.6% |
 
-The model achieves strong calibration on the core approaches. Validation performance is moderate; the main residual error occurs on one approach and is documented as a known limitation of the network extent.
-
-### Boundary Approaches
-
-Four approaches located on the edge of the extracted network show high GEH because their upstream junctions were not included in the OSM Web Wizard bounding box. These are excluded from the primary evaluation and discussed as a methodological limitation.
+The model calibrates well on the core approaches. Validation is moderate, with the largest residual error on the south approach. The reasons and exclusions are documented in the [results report](Report.md).
 
 ## Repository Structure
+
+```text
 traffic-digital-twin/
-├── toronto/
-│   ├── toronto_cal.sumocfg      # Calibration configuration
-│   ├── toronto_val.sumocfg      # Validation configuration
-│   ├── network/
-│   │   └── osm.net.xml          # Cleaned SUMO network
-│   ├── demand/
-│   │   ├── flows_cal.xml        # Calibration flows (from TMC)
-│   │   ├── flows_val.xml        # Validation flows
-│   │   ├── toronto_cal.rou.xml  # Routed vehicles (cal)
-│   │   ├── toronto_val.rou.xml  # Routed vehicles (val)
-│   │   ├── tmc_cal_2020-01-16.csv
-│   │   └── tmc_val_2020-01-25.csv
-│   ├── detectors/
-│   │   └── detectors.add.xml    # Induction loop detectors
-│   └── results/                 # GEH summaries & detector outputs
-├── calibration/                 # Analysis scripts
-└── intas/                       # Optional InTAS benchmark reference
-text## How to Run
+├── README.md                         # Project entry point
+├── Report.md                         # Results and limitations
+├── sumo-digital-twin-build-guide.md  # Detailed workflow and references
+├── pyproject.toml                    # Python project metadata and dependencies
+├── calibration/                      # Shared analysis directory
+├── src/traffic_digital_twin/         # Python package
+└── toronto/
+    ├── toronto_cal.sumocfg           # Calibration configuration
+    ├── toronto_val.sumocfg           # Validation configuration
+    ├── calibrate_demand.py           # Demand multiplier calibration
+    ├── diagnose_internal.py          # Internal-approach GEH analysis
+    ├── demand/
+    │   ├── flows_cal.xml             # Calibration flow definitions
+    │   ├── flows_val.xml             # Validation flow definitions
+    │   ├── toronto_cal.rou.xml       # Routed calibration vehicles
+    │   ├── toronto_val.rou.xml       # Routed validation vehicles
+    │   ├── tmc_cal_2020-01-16.csv    # Calibration TMC data
+    │   └── tmc_val_2020-01-25.csv    # Validation TMC data
+    ├── detectors/
+    │   └── detectors.add.xml         # Induction-loop detector definitions
+    ├── network/
+    │   └── osm.net.xml               # SUMO network
+    └── results/                      # Detector output and GEH summaries
+```
 
-### Requirements
-- Eclipse SUMO ≥ 1.20 (with `sumo`, `jtrrouter`, `netedit` in PATH)
-- Python ≥ 3.10
-- `pandas`, `numpy`
+## Requirements
 
-### Calibration run
+- Windows, macOS, or Linux
+- Python 3.13 or newer, as specified in [pyproject.toml](pyproject.toml)
+- Eclipse SUMO 1.27.1 or newer with `sumo` and `jtrrouter` available on `PATH`
+- Python dependencies declared in [pyproject.toml](pyproject.toml)
+
+Install the project environment with `uv`:
+
+```bash
+uv sync
+```
+
+Alternatively, install the declared dependencies with your preferred Python environment manager.
+
+## Running the Model
+
+Run commands from the `toronto/` directory because the SUMO configuration files use paths relative to that directory.
+
+### Calibration simulation
+
 ```bash
 cd toronto
 sumo -c toronto_cal.sumocfg
 python diagnose_internal.py
-Validation run
-Bashsumo -c toronto_val.sumocfg
-# (point the diagnosis script to tmc_val_2020-01-25.csv)
-python diagnose_internal.py
+```
 
+The demand multiplier experiment is available as:
 
-Methodology Summary
+```bash
+cd toronto
+python calibrate_demand.py
+```
 
-Network – Extracted via OSM Web Wizard, cleaned in netedit.
-Demand – Turning Movement Counts converted to <flow> definitions and routed with jtrrouter.
-Detectors – Induction loops placed on approach lanes (period = 900 s to match TMC intervals).
-Calibration – Demand scaling and approach-specific adjustments; evaluated with GEH.
-Validation – Same model applied to a second day without further parameter changes.
-Limitations – Boundary approaches lack upstream junctions → documented and excluded from primary metrics.
+It writes the demand calibration summary to `toronto/results/calibration_demand.csv` and restores the original calibration flows when it finishes.
 
-Limitations
+### Validation simulation
 
-Four peripheral approaches suffer from missing upstream network connectivity (OSM extract boundary effect).
-High number of teleports on the denser calibration day indicates residual congestion / lane-change issues.
-Turning ratios are derived from a single day and do not fully capture day-to-day variability.
+```bash
+cd toronto
+sumo -c toronto_val.sumocfg
+```
 
-Future Improvements
+The current `diagnose_internal.py` reads the calibration TMC file by design. To calculate validation metrics, use the same analysis pattern with `toronto/demand/tmc_val_2020-01-25.csv` as the observed input, or extend the script with an input-file argument.
 
-Expand the OSM bounding box to include upstream junctions for the boundary approaches.
-Introduce time-varying turning ratios or origin-destination matrices.
-Calibrate driver behaviour parameters (tau, sigma) in addition to demand volumes.
-Add multi-day validation and confidence intervals on GEH.
+## Methodology
 
-Licence
-This project is released for educational and research purposes.
+1. Extract and clean the Toronto road network from OpenStreetMap.
+2. Convert TMC turning counts into SUMO flow definitions.
+3. Route the flows through the network with `jtrrouter`.
+4. Compare detector counts with observed 15-minute TMC counts.
+5. Evaluate demand using the GEH statistic and inspect internal and boundary approaches separately.
+6. Validate the calibrated demand on an independent day without further parameter changes.
 
-City of Toronto TMC data remains subject to the City’s open-data licence
+## Limitations and Next Steps
+
+- Four peripheral approaches are affected by missing upstream network connectivity.
+- The calibration uses turning ratios from a single day, so day-to-day demand variation remains.
+- The denser calibration day produces teleports that indicate residual congestion or lane-change issues.
+- Future work should expand the network boundary, add time-varying turning ratios, calibrate driver behavior, and validate across more days.
+
+See the [results report](Report.md) for the full discussion.
+
+## License and Data
+
+This project is released for educational and research purposes. City of Toronto TMC data remains subject to the City's open-data license.
