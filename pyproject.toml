@@ -1,0 +1,22 @@
+[project]
+name = "traffic-digital-twin"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "libsumo>=1.27.1",
+    "lxml>=6.1.3",
+    "matplotlib>=3.11.1",
+    "numpy>=2.5.2",
+    "pandas>=3.0.5",
+    "requests>=2.34.2",
+    "scipy>=1.18.1",
+]
+
+[project.scripts]
+traffic-digital-twin = "traffic_digital_twin:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"

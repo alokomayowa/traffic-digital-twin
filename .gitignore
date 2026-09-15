@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+*.backup*
+*_temp.*
+toronto/detectors/e1_*.xml
+toronto/network/*.gz
+toronto/network/osm.passenger.*
+toronto/network/tripinfos.xml
+toronto/network/stats.xml
